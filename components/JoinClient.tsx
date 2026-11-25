@@ -59,7 +59,7 @@ export default function JoinClient({ code, heroName, closed, full }: { code: str
   return (
     <form className="panel wide" onSubmit={send} style={{ paddingTop: 24, paddingBottom: 60 }}>
       {head}
-      <p className="sub" style={{ marginBottom: 8 }}>Write one letter. Only {heroName} will ever read it.</p>
+      <p className="sub" style={{ marginBottom: 8 }}>Write a letter / note. Only {heroName} will ever read it.</p>
       <p className="note">Not the other friends, and not the organiser.</p>
 
       <div className="paper-editor" style={{ marginTop: 20 }}>
@@ -79,7 +79,7 @@ export default function JoinClient({ code, heroName, closed, full }: { code: str
           maxLength={MAX}
           onChange={(e) => setBody(e.target.value)}
           placeholder={`Dear ${heroName},`}
-          aria-label="Your letter"
+          aria-label="Your letter or note"
           style={{ minHeight: 260, height: "42vh" }}
         />
         <div className="status">
@@ -88,7 +88,7 @@ export default function JoinClient({ code, heroName, closed, full }: { code: str
         </div>
       </div>
       <div style={{ marginTop: 18 }}>
-        <button className="btn" disabled={busy || !name.trim() || !body.trim()}>{busy ? "Sending…" : "Send my letter"}</button>
+        <button className="btn" disabled={busy || !name.trim() || !body.trim()}>{busy ? "Sending…" : "Send my letter / note"}</button>
       </div>
       <p className="note" style={{ marginTop: 14 }}>You can't edit it after sending, so read it over once first.</p>
     </form>
