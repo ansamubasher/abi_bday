@@ -4,7 +4,8 @@
  */
 type Sfx =
   | "jump" | "land" | "slash" | "hit" | "kill" | "hurt" | "dash" | "wisp" | "light"
-  | "bench" | "altar" | "letter" | "boss" | "bossdie" | "click" | "tablet" | "rune";
+  | "bench" | "altar" | "letter" | "boss" | "bossdie" | "click" | "tablet" | "rune"
+  | "grub" | "grubsong" | "flower" | "shatter" | "coin" | "vanish";
 
 const ZONE_ROOTS = [110, 98, 82.4, 73.4]; // A2, G2, E2, D2
 const SCALE = [0, 3, 5, 7, 10, 12, 15]; // minor pentatonic-ish
@@ -193,6 +194,14 @@ class AudioEngine {
         break;
       case "click": this.tone(600, 0.05, 0.05, "square"); break;
       case "tablet": this.noise(0.25, 0.08, 800, 400, 0.6); break;
+      case "grub": this.tone(1040, 0.09, 0.09, "triangle"); this.tone(1380, 0.08, 0.1, "triangle", false, undefined, 0.08); this.tone(1040, 0.07, 0.12, "triangle", false, undefined, 0.17); break;
+      case "grubsong":
+        [0, 4, 7, 4, 0, 7, 12].forEach((s, i) => this.tone(523 * Math.pow(2, s / 12), 0.1, 0.32, "triangle", false, undefined, i * 0.2));
+        break;
+      case "flower": this.tone(784, 0.08, 1.4, "sine", true); this.tone(988, 0.06, 1.6, "sine", true, undefined, 0.15); break;
+      case "shatter": this.noise(0.3, 0.2, 5000, 1200, 0.5); this.tone(1568, 0.1, 0.4, "sine", true); this.tone(1175, 0.08, 0.5, "sine", true, undefined, 0.06); break;
+      case "coin": this.tone(1320, 0.08, 0.12, "square"); this.tone(1760, 0.07, 0.18, "square", false, undefined, 0.07); break;
+      case "vanish": this.noise(0.8, 0.18, 1800, 120, 0.6); this.tone(330, 0.12, 0.7, "sawtooth"); this.tone(220, 0.1, 0.9, "sawtooth", false, undefined, 0.2); break;
       case "rune": this.tone(180, 0.2, 1.2, "triangle", true); this.tone(270, 0.12, 1.2, "triangle", true, undefined, 0.1); break;
     }
   }

@@ -25,7 +25,7 @@ const altarX: Record<string, number> = {};
 for (const a of L.altars) altarX[a.ability] = a.x;
 for (const h of L.hops) {
   const need = h.req === "none" ? null : h.req === "wall" ? "wall" : h.req;
-  if (need && altarX[need] !== undefined && h.to.x < altarX[need] && !h.shaft)
+  if (need && altarX[need] !== undefined && h.from.x + h.from.w < altarX[need] && !h.shaft)
     errs.push(`hop to x=${Math.round(h.to.x)} needs ${need} before its altar`);
 }
 for (const h of L.hops)
@@ -50,16 +50,6 @@ for (const a of L.plats) {
 // solid bodies must not intersect each other (would block the route)
 for (let i = 0; i < L.plats.length; i++) {
   for (let j = i + 1; j < L.plats.length; j++) {
-    const a = L.plats[i], b = L.plats[j];
-    const ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
-    const oy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
-    if (ox > 4 && oy > 4) errs.push();
-  }
-}
-
-// solid bodies must not intersect each other (would block the route)
-for (let i = 0; i < L.plats.length; i++) {
-  for (let j = i + 1; j < L.plats.length; j++) {
     const a = L.plats[i];
     const b = L.plats[j];
     const ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
@@ -69,6 +59,27 @@ for (let i = 0; i < L.plats.length; i++) {
     }
   }
 }
+
+// everything placed in the world must stand on a platform
+const standsOn = (name: string, p: { x: number; y: number } | null, margin = 20) => {
+  if (!p) { errs.push(`${name} is missing`); return; }
+  const ok = L.plats.some((pl) => p.x >= pl.x + margin && p.x <= pl.x + pl.w - margin && Math.abs(p.y - pl.y) <= 2);
+  if (!ok) errs.push(`${name} at ${Math.round(p.x)},${Math.round(p.y)} is not standing on a platform`);
+};
+standsOn("map", L.mapSpot);
+standsOn("bank", L.bank, 60);
+standsOn("millibelle", L.millibelle, 60);
+standsOn("flower", L.flower);
+standsOn("vase", L.vase);
+standsOn("quirrel", L.quirrel);
+if (L.lake) {
+  standsOn("lake start", { x: L.lake.x, y: L.lake.y });
+  standsOn("lake end", { x: L.lake.x + L.lake.w, y: L.lake.y });
+}
+L.grubs.forEach((g) => standsOn(`grub ${g.id}`, g));
+if (L.grubs.length !== 6) errs.push(`expected 6 grubs, found ${L.grubs.length}`);
+if (L.bank && L.millibelle && L.millibelle.x < L.bank.x) errs.push("Millibelle must be found after the bank");
+if (L.flower && L.vase && L.vase.x < L.flower.x) errs.push("the vase must come after the flower");
 
 // content sanity
 const slots = L.lights.map((l) => l.slot).sort((a, b) => a - b);

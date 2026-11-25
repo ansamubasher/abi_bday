@@ -27,4 +27,5 @@ export type HudState = {
   boss: { name: string; hp: number; max: number } | null;
   timer: number; // seconds left, 0 = off
   tablets: number;
+  grubs: number;
 };

@@ -10,6 +10,14 @@ export type Save = {
   easy: boolean;
   started: boolean;
   muted: boolean;
+  /** hidden extras */
+  grubs: string[];
+  flower: boolean; // delivered
+  banked: number; // wisps handed to the bank
+  bankClosed: boolean;
+  milli: boolean; // met Millibelle
+  quirrel: boolean;
+  map: boolean;
 };
 
 const KEY = "lantern-below-save-v1";
@@ -26,6 +34,13 @@ export const freshSave = (): Save => ({
   easy: false,
   started: false,
   muted: false,
+  grubs: [],
+  flower: false,
+  banked: 0,
+  bankClosed: false,
+  milli: false,
+  quirrel: false,
+  map: false,
 });
 
 export function loadSave(): Save {

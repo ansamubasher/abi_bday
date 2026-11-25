@@ -111,6 +111,76 @@ export async function letterMeta(writerId: string) {
   };
 }
 
+/* ---------- one shared link for all friends ---------- */
+const INVITE = "config:invite";
+
+/** The single unguessable code in the share link. Created on first use. */
+export async function getInviteCode(): Promise<string> {
+  let c = await db().get<string>(INVITE);
+  if (!c) {
+    c = randomToken().slice(0, 12);
+    await db().set(INVITE, c);
+  }
+  return c;
+}
+export async function regenInviteCode(): Promise<string> {
+  const c = randomToken().slice(0, 12);
+  await db().set(INVITE, c);
+  return c;
+}
+
+/**
+ * A friend used the shared link: make them a private edit token, give them the next free lantern,
+ * and save their first draft. Never lets one person overwrite another.
+ */
+export async function createJoined(
+  name: string,
+  body: string
+): Promise<{ ok: true; token: string } | { ok: false; reason: "full" | "dup" }> {
+  const writers = await listWriters();
+  if (writers.length >= MAX_WRITERS) return { ok: false, reason: "full" };
+  const key = name.trim().toLowerCase();
+  if (writers.some((w) => w.name.trim().toLowerCase() === key)) return { ok: false, reason: "dup" };
+
+  const used = new Set(writers.map((w) => w.slot));
+  let slot = 0;
+  while (used.has(slot)) slot++;
+  const token = randomToken();
+  const me: Writer = {
+    id: randomToken().slice(0, 12),
+    slot,
+    name: name.trim().slice(0, 60),
+    tokenHash: hashToken(token),
+    tokenEnc: encrypt(token),
+    createdAt: Date.now(),
+  };
+  writers.push(me);
+  writers.sort((a, b) => a.slot - b.slot);
+  await saveWriters(writers);
+  await saveLetter(me.id, body, me.name);
+
+  // two friends submitting in the same instant could pick the same slot: settle it deterministically
+  const now = await listWriters();
+  const clash = now.filter((w) => w.slot === me.slot);
+  if (clash.length > 1) {
+    const winner = [...clash].sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id))[0];
+    if (winner.id !== me.id) {
+      const taken = new Set(now.map((w) => w.slot));
+      let free = 0;
+      while (taken.has(free)) free++;
+      if (free >= MAX_WRITERS) {
+        await deleteWriter(me.id);
+        return { ok: false, reason: "full" };
+      }
+      const mine = now.find((w) => w.id === me.id);
+      if (mine) mine.slot = free;
+      now.sort((a, b) => a.slot - b.slot);
+      await saveWriters(now);
+    }
+  }
+  return { ok: true, token };
+}
+
 export async function isLocked(): Promise<boolean> {
   return (await db().get<boolean>(LOCK)) === true;
 }

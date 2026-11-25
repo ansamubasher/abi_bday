@@ -65,6 +65,11 @@ h1.title {
 .eyebrow { text-transform: uppercase; letter-spacing: 0.32em; font-size: 11px; color: var(--dim); margin-bottom: 22px; }
 .sub { font-family: var(--serif); font-size: 21px; color: var(--mist); line-height: 1.5; margin: 0 0 34px; }
 
+.portrait {
+  display: block; width: 124px; height: 124px; margin: 0 auto 22px; border-radius: 50%; object-fit: cover;
+  border: 2px solid rgba(232, 184, 106, 0.85);
+  box-shadow: 0 0 0 6px rgba(8, 12, 22, 0.8), 0 0 40px 8px rgba(232, 184, 106, 0.3), 0 0 120px 30px rgba(232, 184, 106, 0.12);
+}
 .lantern {
   width: 14px; height: 14px; border-radius: 50%; margin: 0 auto 28px;
   background: radial-gradient(circle, #fff3d6, var(--ember) 55%, transparent 70%);

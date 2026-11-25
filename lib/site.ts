@@ -6,14 +6,16 @@
  *  still needs filling in.
  */
 export const site = {
-  /** PLACEHOLDER: the birthday person's name / nickname. */
-  heroName: "Name",
+  /** The birthday person's name / nickname. */
+  heroName: "Abi",
   /** PLACEHOLDER: shown on the final screen. e.g. "15 January 2027" */
   birthdayLabel: "Their birthday",
   /** PLACEHOLDER: how old they're turning (shown in the finale). null hides it. */
   turningAge: null as number | null,
   /** The game's title. */
-  title: "The Lantern Below",
+  title: "Hollow Knight: Abi Birthday Edition",
+  /** Small line under the title. A private fan-made gift, not affiliated with the original game. */
+  fanNote: "A fan-made birthday gift. Not affiliated with Team Cherry.",
   tagline: "Twenty-two lights went out. Someone should go and look.",
 
   /**

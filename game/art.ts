@@ -51,7 +51,7 @@ type Pose = {
 function drawBody(g: CanvasRenderingContext2D, o: Pose) {
   const lean = o.lean ?? 0, bob = o.bob ?? 0, ph = o.ph ?? 0;
   // scarf tail (behind)
-  g.fillStyle = "#b98a48";
+  g.fillStyle = "#27408f";
   g.beginPath();
   const sc = o.scarf ?? 6;
   g.moveTo(27 + lean, 17 + bob);
@@ -65,8 +65,8 @@ function drawBody(g: CanvasRenderingContext2D, o: Pose) {
   const lift = (v: number) => (o.legs === "run" ? Math.max(0, -v) * 0.5 : o.legs === "air" ? 2 : 0);
   g.beginPath(); g.roundRect(25 + lA, 55 - lift(lA), 6, 8 + lift(lA), 3); g.fill();
   g.beginPath(); g.roundRect(34 + lB, 55 - lift(lB), 6, 8 + lift(lB), 3); g.fill();
-  // cloak
-  g.fillStyle = INK2;
+  // cloak (deep blue, tattered hem)
+  g.fillStyle = "#142054";
   g.beginPath();
   g.moveTo(24 + lean, 16 + bob);
   g.quadraticCurveTo(32 + lean, 11 + bob, 40 + lean, 16 + bob);
@@ -75,7 +75,7 @@ function drawBody(g: CanvasRenderingContext2D, o: Pose) {
   g.quadraticCurveTo(18 + lean * 0.4, 38, 24 + lean, 16 + bob);
   g.fill();
   // rim light on right edge
-  g.strokeStyle = "rgba(143,179,217,0.75)";
+  g.strokeStyle = "rgba(120,160,255,0.85)";
   g.lineWidth = 1.5;
   g.beginPath();
   g.moveTo(40 + lean, 16 + bob);
@@ -86,7 +86,7 @@ function drawBody(g: CanvasRenderingContext2D, o: Pose) {
   g.lineWidth = 1;
   g.beginPath(); g.moveTo(32 + lean * 0.5, 26); g.lineTo(31, 58); g.stroke();
   // neck scarf
-  g.fillStyle = "#c9a05a";
+  g.fillStyle = "#3a58b8";
   g.beginPath(); g.roundRect(24 + lean, 14 + bob, 17, 6, 3); g.fill();
   // arm + lantern
   const ax = 46 + (o.arm ?? 0);
@@ -128,45 +128,60 @@ export function makePlayerFrames(scene: Phaser.Scene) {
 }
 export const FRAME_COUNT: Record<string, number> = Object.fromEntries(Object.entries(POSES).map(([k, v]) => [k, v.length]));
 
-/** The hood + face. If /hero/face.png loaded, it's cut into a circle; otherwise an empty placeholder. */
+/**
+ * The head: a pale, horned shell with two big dark eyes (a nod to the little knight everyone knows).
+ * If /hero/face.png loaded, the photo is set into a round window in the shell instead of the eyes.
+ */
 export function makeHead(scene: Phaser.Scene) {
   const hasFace = scene.textures.exists("face_src");
   canvasTex(scene, "head", 64, 64, (g) => {
-    // hood with two little ear-tufts
-    g.fillStyle = INK2;
+    const shell = g.createLinearGradient(0, 14, 0, 62);
+    shell.addColorStop(0, "#f7f9ff");
+    shell.addColorStop(1, "#c3cde6");
+    // horns
+    g.fillStyle = "#eef2fc";
     g.beginPath();
-    g.moveTo(10, 24); g.lineTo(11, 3); g.lineTo(22, 12);
-    g.lineTo(42, 12); g.lineTo(53, 3); g.lineTo(54, 24);
-    g.quadraticCurveTo(58, 50, 32, 62);
-    g.quadraticCurveTo(6, 50, 10, 24);
+    g.moveTo(15, 31); g.quadraticCurveTo(6, 16, 14, 1); g.quadraticCurveTo(16, 14, 25, 22); g.closePath(); g.fill();
+    g.beginPath();
+    g.moveTo(49, 31); g.quadraticCurveTo(58, 16, 50, 1); g.quadraticCurveTo(48, 14, 39, 22); g.closePath(); g.fill();
+    g.strokeStyle = "rgba(60,80,130,0.55)"; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(14, 1); g.quadraticCurveTo(16, 14, 25, 22); g.stroke();
+    g.beginPath(); g.moveTo(50, 1); g.quadraticCurveTo(48, 14, 39, 22); g.stroke();
+    // shell
+    g.fillStyle = shell;
+    g.beginPath();
+    g.moveTo(32, 15);
+    g.bezierCurveTo(50, 15, 56, 30, 54, 42);
+    g.bezierCurveTo(52, 56, 42, 62, 32, 62);
+    g.bezierCurveTo(22, 62, 12, 56, 10, 42);
+    g.bezierCurveTo(8, 30, 14, 15, 32, 15);
     g.fill();
-    g.strokeStyle = "rgba(143,179,217,0.7)"; g.lineWidth = 1.6;
-    g.beginPath(); g.moveTo(53, 3); g.lineTo(54, 24); g.quadraticCurveTo(58, 50, 32, 62); g.stroke();
-    // face window
-    const cx = 32, cy = 36, r = 21;
-    g.save();
-    g.beginPath(); g.arc(cx, cy, r, 0, 7); g.clip();
+    g.strokeStyle = "rgba(20,30,70,0.7)"; g.lineWidth = 1.4; g.stroke();
+    // cool rim light on the right
+    g.strokeStyle = "rgba(140,175,255,0.7)"; g.lineWidth = 1.6;
+    g.beginPath(); g.moveTo(47, 20); g.bezierCurveTo(55, 30, 56, 44, 49, 55); g.stroke();
+    // small crease on the brow
+    g.strokeStyle = "rgba(60,70,110,0.55)"; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(32, 15); g.lineTo(32, 22); g.stroke();
     if (hasFace) {
+      // PHOTO: set into a round window in the shell
+      const cx = 32, cy = 40, r = 18;
+      g.save();
+      g.beginPath(); g.arc(cx, cy, r, 0, 7); g.clip();
       const img = scene.textures.get("face_src").getSourceImage() as HTMLImageElement;
-      const s = Math.max((r * 2) / img.width, (r * 2) / img.height);
-      const w = img.width * s, h = img.height * s;
+      const sc = Math.max((r * 2) / img.width, (r * 2) / img.height);
+      const w = img.width * sc, h = img.height * sc;
       g.drawImage(img, cx - w / 2, cy - h / 2, w, h);
-      g.fillStyle = "rgba(90,120,170,0.16)"; g.fillRect(0, 0, 64, 64);
-      const vg = g.createRadialGradient(cx, cy, r * 0.5, cx, cy, r);
-      vg.addColorStop(0, "rgba(5,8,16,0)"); vg.addColorStop(1, "rgba(5,8,16,0.6)");
-      g.fillStyle = vg; g.fillRect(0, 0, 64, 64);
+      g.fillStyle = "rgba(90,120,170,0.14)"; g.fillRect(0, 0, 64, 64);
+      g.restore();
+      g.strokeStyle = "rgba(20,30,70,0.8)"; g.lineWidth = 2;
+      g.beginPath(); g.arc(cx, cy, r, 0, 7); g.stroke();
     } else {
-      // PLACEHOLDER: empty face
-      g.fillStyle = "#cdd3de"; g.fillRect(0, 0, 64, 64);
-      g.strokeStyle = "rgba(100,110,130,0.25)"; g.lineWidth = 1;
-      for (let i = -64; i < 64; i += 8) { g.beginPath(); g.moveTo(i, 64); g.lineTo(i + 64, 0); g.stroke(); }
+      // PLACEHOLDER: the empty mask, two big dark eyes
+      g.fillStyle = "#05070d";
+      g.beginPath(); g.ellipse(23, 41, 6.5, 9.5, 0.28, 0, 7); g.fill();
+      g.beginPath(); g.ellipse(41, 41, 6.5, 9.5, -0.28, 0, 7); g.fill();
     }
-    g.restore();
-    g.strokeStyle = hasFace ? "rgba(143,179,217,0.5)" : "rgba(20,30,50,0.8)";
-    g.lineWidth = 2;
-    if (!hasFace) g.setLineDash([3, 3]);
-    g.beginPath(); g.arc(cx, cy, r, 0, 7); g.stroke();
-    g.setLineDash([]);
   });
 }
 
@@ -504,6 +519,181 @@ function bgLayers(scene: Phaser.Scene, zone: number) {
   });
 }
 
+/* ------------------------- little nods & secrets ------------------------- */
+function drawGrub(g: CanvasRenderingContext2D, ox: number, oy: number, s = 1) {
+  g.save();
+  g.translate(ox, oy);
+  g.scale(s, s);
+  // body: three soft segments
+  g.fillStyle = "#7fbf5a";
+  g.beginPath(); g.ellipse(18, 10, 12, 8, 0, 0, 7); g.fill();
+  g.fillStyle = "#8fd06a";
+  g.beginPath(); g.ellipse(8, 11, 8, 6.5, 0, 0, 7); g.fill();
+  g.fillStyle = "#a6dc7e";
+  g.beginPath(); g.ellipse(-2, 12, 6, 5, 0, 0, 7); g.fill();
+  g.strokeStyle = "rgba(40,80,30,0.5)"; g.lineWidth = 1;
+  g.beginPath(); g.moveTo(13, 3); g.lineTo(13, 17); g.moveTo(4, 5); g.lineTo(4, 17); g.stroke();
+  // face
+  g.fillStyle = "#f4f8e8";
+  g.beginPath(); g.ellipse(26, 9, 6, 5.5, 0, 0, 7); g.fill();
+  g.fillStyle = "#101a10";
+  g.beginPath(); g.arc(24.5, 8, 1.3, 0, 7); g.fill();
+  g.beginPath(); g.arc(28.5, 8, 1.3, 0, 7); g.fill();
+  g.strokeStyle = "#101a10"; g.lineWidth = 1;
+  g.beginPath(); g.arc(26.5, 11, 2, 0.2, 2.9); g.stroke();
+  g.restore();
+}
+
+function drawFlower(g: CanvasRenderingContext2D, cx: number, base: number) {
+  g.strokeStyle = "#5c8a4a"; g.lineWidth = 2.5; g.lineCap = "round";
+  g.beginPath(); g.moveTo(cx, base); g.quadraticCurveTo(cx - 3, base - 20, cx, base - 36); g.stroke();
+  g.fillStyle = "#6e9d55";
+  g.beginPath(); g.ellipse(cx - 6, base - 14, 6, 2.6, -0.6, 0, 7); g.fill();
+  g.beginPath(); g.ellipse(cx + 6, base - 20, 6, 2.6, 0.6, 0, 7); g.fill();
+  g.save();
+  g.translate(cx, base - 42);
+  g.shadowColor = "#ffffff"; g.shadowBlur = 8;
+  for (let i = 0; i < 6; i++) {
+    g.rotate(Math.PI / 3);
+    g.fillStyle = i % 2 ? "#ffffff" : "#f1f5ff";
+    g.beginPath(); g.ellipse(0, -8, 4.6, 8, 0, 0, 7); g.fill();
+  }
+  g.shadowBlur = 0;
+  g.fillStyle = "#f2c868";
+  g.beginPath(); g.arc(0, 0, 3.4, 0, 7); g.fill();
+  g.restore();
+}
+
+function makeExtras(scene: Phaser.Scene) {
+  // grub in a little glass jar
+  canvasTex(scene, "grub_jar", 56, 64, (g) => {
+    g.fillStyle = "rgba(150,210,200,0.2)";
+    g.beginPath(); g.roundRect(6, 14, 44, 46, 10); g.fill();
+    drawGrub(g, 9, 28, 0.85);
+    g.strokeStyle = "rgba(190,235,225,0.75)"; g.lineWidth = 2;
+    g.beginPath(); g.roundRect(6, 14, 44, 46, 10); g.stroke();
+    g.fillStyle = "#4a3320"; g.beginPath(); g.roundRect(10, 6, 36, 10, 3); g.fill();
+    g.strokeStyle = "rgba(255,255,255,0.45)"; g.lineWidth = 1.5;
+    g.beginPath(); g.moveTo(13, 24); g.lineTo(13, 46); g.stroke();
+  });
+  canvasTex(scene, "grub", 44, 28, (g) => drawGrub(g, 4, 4, 1));
+
+  // the delicate flower
+  canvasTex(scene, "flower", 32, 60, (g) => drawFlower(g, 16, 58));
+
+  // a pot for it, and a planted version
+  canvasTex(scene, "vase", 52, 56, (g) => {
+    g.fillStyle = "#0e1424";
+    g.beginPath(); g.moveTo(10, 56); g.quadraticCurveTo(4, 34, 14, 22); g.lineTo(38, 22); g.quadraticCurveTo(48, 34, 42, 56); g.closePath(); g.fill();
+    g.fillRect(12, 16, 28, 8);
+    g.strokeStyle = "rgba(143,179,217,0.55)"; g.lineWidth = 1.5;
+    g.beginPath(); g.moveTo(14, 18); g.lineTo(38, 18); g.stroke();
+    g.beginPath(); g.moveTo(16, 36); g.lineTo(36, 36); g.stroke();
+  });
+
+  // Cornifer's folded map on a small rock
+  canvasTex(scene, "map_item", 60, 44, (g) => {
+    g.fillStyle = "#101828";
+    g.beginPath(); g.ellipse(30, 40, 26, 6, 0, 0, 7); g.fill();
+    g.fillStyle = "#e9dcb4";
+    g.beginPath(); g.moveTo(8, 36); g.lineTo(16, 12); g.lineTo(30, 18); g.lineTo(44, 10); g.lineTo(52, 34); g.lineTo(30, 40); g.closePath(); g.fill();
+    g.strokeStyle = "rgba(120,90,50,0.7)"; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(16, 12); g.lineTo(18, 37); g.moveTo(30, 18); g.lineTo(30, 40); g.moveTo(44, 10); g.lineTo(42, 36); g.stroke();
+    g.strokeStyle = "#a33a2a"; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(34, 24); g.lineTo(40, 30); g.moveTo(40, 24); g.lineTo(34, 30); g.stroke();
+  });
+
+  // the bank
+  canvasTex(scene, "bank", 190, 170, (g) => {
+    g.fillStyle = "#121a2e";
+    g.fillRect(14, 62, 162, 108);
+    g.fillStyle = "#1a2540";
+    g.beginPath(); g.moveTo(4, 66); g.lineTo(95, 14); g.lineTo(186, 66); g.closePath(); g.fill();
+    g.strokeStyle = "#d9b45f"; g.lineWidth = 3;
+    g.beginPath(); g.moveTo(4, 66); g.lineTo(95, 14); g.lineTo(186, 66); g.stroke();
+    // pillars
+    g.fillStyle = "#26335a";
+    for (const x of [24, 62, 118, 156]) g.fillRect(x, 70, 10, 100);
+    // door
+    g.fillStyle = "#06080f"; g.beginPath(); g.roundRect(78, 104, 34, 66, [14, 14, 0, 0]); g.fill();
+    g.strokeStyle = "#d9b45f"; g.lineWidth = 2; g.beginPath(); g.roundRect(78, 104, 34, 66, [14, 14, 0, 0]); g.stroke();
+    // sign + coin
+    g.fillStyle = "#d9b45f"; g.beginPath(); g.roundRect(54, 74, 82, 22, 4); g.fill();
+    g.fillStyle = "#1a1408"; g.font = "bold 15px Georgia, serif"; g.textAlign = "center";
+    g.fillText("BANK", 95, 91);
+    g.save(); g.shadowColor = "#ffd88a"; g.shadowBlur = 10; g.fillStyle = "#ffd88a";
+    g.beginPath(); g.arc(95, 40, 9, 0, 7); g.fill(); g.restore();
+    g.fillStyle = "#8a6a20"; g.font = "bold 12px Georgia, serif"; g.fillText("$", 95, 44.5);
+  });
+
+  // Millibelle's holiday spot: a striped parasol, a chair, a very relaxed bird
+  canvasTex(scene, "millibelle", 150, 150, (g) => {
+    // pole
+    g.strokeStyle = "#3a2a1a"; g.lineWidth = 3;
+    g.beginPath(); g.moveTo(104, 148); g.lineTo(104, 30); g.stroke();
+    // parasol
+    for (let i = 0; i < 6; i++) {
+      g.fillStyle = i % 2 ? "#f1f3fa" : "#e0596b";
+      const a0 = Math.PI + (i * Math.PI) / 6, a1 = Math.PI + ((i + 1) * Math.PI) / 6;
+      g.beginPath(); g.moveTo(104, 34); g.arc(104, 34, 52, a0, a1); g.closePath(); g.fill();
+    }
+    // chair
+    g.strokeStyle = "#1a2540"; g.lineWidth = 6; g.lineCap = "round";
+    g.beginPath(); g.moveTo(26, 146); g.lineTo(46, 108); g.lineTo(88, 108); g.lineTo(100, 146); g.stroke();
+    g.beginPath(); g.moveTo(46, 108); g.lineTo(34, 84); g.stroke();
+    g.fillStyle = "#34508f"; g.beginPath(); g.roundRect(36, 100, 56, 10, 4); g.fill();
+    // the bird
+    g.fillStyle = "#3d6dd6"; g.beginPath(); g.ellipse(62, 86, 20, 22, 0, 0, 7); g.fill();
+    g.fillStyle = "#6fa0ff"; g.beginPath(); g.ellipse(70, 92, 12, 14, 0, 0, 7); g.fill();
+    g.fillStyle = "#3d6dd6"; g.beginPath(); g.arc(56, 58, 16, 0, 7); g.fill();
+    g.fillStyle = "#f4c25c"; g.beginPath(); g.moveTo(66, 58); g.lineTo(86, 62); g.lineTo(66, 67); g.closePath(); g.fill();
+    // sunglasses
+    g.fillStyle = "#05070d";
+    g.beginPath(); g.ellipse(52, 55, 6.5, 4.5, 0, 0, 7); g.fill();
+    g.beginPath(); g.ellipse(65, 55, 6.5, 4.5, 0, 0, 7); g.fill();
+    g.fillRect(56, 54, 4, 1.8);
+    // drink
+    g.fillStyle = "rgba(255,150,190,0.85)"; g.beginPath(); g.moveTo(80, 84); g.lineTo(96, 84); g.lineTo(88, 100); g.closePath(); g.fill();
+    g.strokeStyle = "#e8f0ff"; g.lineWidth = 1.5; g.beginPath(); g.moveTo(88, 100); g.lineTo(88, 108); g.stroke();
+    g.fillStyle = "#e0596b"; g.beginPath(); g.arc(94, 82, 3, 0, 7); g.fill();
+  });
+
+  // Quirrel, sitting by the lake with his nail across his lap
+  canvasTex(scene, "quirrel", 96, 84, (g) => {
+    // cloak
+    g.fillStyle = "#6b4f3a";
+    g.beginPath(); g.moveTo(24, 80); g.quadraticCurveTo(14, 48, 34, 34); g.lineTo(62, 34); g.quadraticCurveTo(82, 48, 72, 80); g.closePath(); g.fill();
+    g.fillStyle = "#8a6a4e"; g.beginPath(); g.moveTo(34, 36); g.lineTo(62, 36); g.lineTo(58, 44); g.lineTo(38, 44); g.closePath(); g.fill();
+    // round helmet-head
+    g.fillStyle = "#e6dcc6"; g.beginPath(); g.arc(48, 24, 19, 0, 7); g.fill();
+    g.strokeStyle = "rgba(60,45,30,0.6)"; g.lineWidth = 1.5; g.beginPath(); g.arc(48, 24, 19, 0, 7); g.stroke();
+    g.fillStyle = "#2a1d12"; g.fillRect(31, 22, 34, 6);
+    g.fillStyle = "#f6e9b0"; g.beginPath(); g.arc(41, 25, 2, 0, 7); g.arc(55, 25, 2, 0, 7); g.fill();
+    // little horn tuft
+    g.fillStyle = "#e6dcc6"; g.beginPath(); g.moveTo(44, 6); g.lineTo(48, -2); g.lineTo(52, 6); g.closePath(); g.fill();
+    // legs folded + nail across lap
+    g.fillStyle = "#4e3826"; g.beginPath(); g.ellipse(48, 78, 30, 7, 0, 0, 7); g.fill();
+    g.save(); g.translate(48, 66); g.rotate(-0.12);
+    g.fillStyle = "#cfd8ea"; g.beginPath(); g.moveTo(-34, -2); g.lineTo(26, -4); g.lineTo(34, 0); g.lineTo(26, 3); g.lineTo(-34, 3); g.closePath(); g.fill();
+    g.fillStyle = "#3a2a1a"; g.fillRect(-40, -3, 10, 7);
+    g.restore();
+  });
+
+  // lake water (tiles horizontally)
+  canvasTex(scene, "lake", 256, 56, (g) => {
+    const gr = g.createLinearGradient(0, 0, 0, 56);
+    gr.addColorStop(0, "#5fa8ff"); gr.addColorStop(0.35, "#2c5fc4"); gr.addColorStop(1, "#0b1a4a");
+    g.fillStyle = gr; g.fillRect(0, 0, 256, 56);
+    g.strokeStyle = "rgba(220,240,255,0.55)"; g.lineWidth = 1.5;
+    for (let i = 0; i < 5; i++) {
+      const y = 8 + i * 9, o = (i * 37) % 64;
+      g.beginPath();
+      for (let x = -10; x < 270; x += 4) g.lineTo(x, y + Math.sin((x + o) / 9) * 1.6);
+      g.stroke();
+    }
+  });
+}
+
 export function makeAllTextures(scene: Phaser.Scene) {
   makeFx(scene);
   makePlayerFrames(scene);
@@ -511,5 +701,6 @@ export function makeAllTextures(scene: Phaser.Scene) {
   makeEnemies(scene);
   makeBosses(scene);
   makeProps(scene);
+  makeExtras(scene);
   for (let z = 0; z < 4; z++) bgLayers(scene, z);
 }

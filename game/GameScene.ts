@@ -8,7 +8,7 @@ import { Save, writeSave } from "./state";
 
 const W = 1280;
 const H = 720;
-const SPEED = 270;
+const SPEED = 320;
 const JUMP_V = 660;
 const GRAV = 1800;
 
@@ -36,9 +36,9 @@ type BossCfg = {
   patterns: string[];
 };
 const BOSSES: Record<BossId, BossCfg> = {
-  warden: { id: "warden", name: "The Warden", tex: "warden", hp: 16, bw: 90, bh: 150, flying: false, patterns: ["charge", "slam"] },
-  archivist: { id: "archivist", name: "The Archivist", tex: "archivist", hp: 20, bw: 120, bh: 110, flying: true, patterns: ["fan", "rain", "dive"] },
-  unlit: { id: "unlit", name: site.finalBossName, tex: "unlit", hp: 30, bw: 100, bh: 180, flying: false, patterns: ["charge", "slam", "ring"] },
+  warden: { id: "warden", name: "The Warden", tex: "warden", hp: 8, bw: 90, bh: 150, flying: false, patterns: ["charge", "slam"] },
+  archivist: { id: "archivist", name: "The Archivist", tex: "archivist", hp: 10, bw: 120, bh: 110, flying: true, patterns: ["fan", "rain", "dive"] },
+  unlit: { id: "unlit", name: site.finalBossName, tex: "unlit", hp: 14, bw: 100, bh: 180, flying: false, patterns: ["charge", "slam", "ring"] },
 };
 
 type Boss = {
@@ -92,6 +92,18 @@ export class GameScene extends Phaser.Scene {
   benchObjs: { id: string; x: number; y: number }[] = [];
   altarObjs: { def: Level["altars"][number]; img: Phaser.GameObjects.Image; orb: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image }[] = [];
   hazards: Phaser.Geom.Rectangle[] = [];
+
+  // hidden extras
+  grubObjs: { id: string; x: number; y: number; img: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image; nextSqueak: number }[] = [];
+  flowerImg: Phaser.GameObjects.Image | null = null;
+  flowerGlow: Phaser.GameObjects.Image | null = null;
+  flowerCarried = false;
+  vaseFlower: Phaser.GameObjects.Image | null = null;
+  bankImg: Phaser.GameObjects.Image | null = null;
+  bankLabel: Phaser.GameObjects.Text | null = null;
+  milliImg: Phaser.GameObjects.Image | null = null;
+  quirrelLine = 0;
+  milliLine = 0;
 
   keys!: Record<"left" | "right" | "jump" | "atk" | "dash" | "use", Phaser.Input.Keyboard.Key[]>;
   clickAtk = false;
@@ -165,13 +177,14 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, bnd.minY - 500, bnd.maxX, bnd.maxY - bnd.minY + 700);
     this.cameras.main.setBackgroundColor(ZONE_PAL[0].top);
 
-    this.maxHp = this.S.easy ? 8 : 5;
+    this.maxHp = (this.S.easy ? 8 : 5) + this.bonusHp();
     this.hp = this.maxHp;
 
     this.buildBackground();
     this.buildPlatforms();
     this.buildProps();
     this.buildPlayer();
+    this.buildExtras();
     this.buildFx();
     this.buildBosses();
     this.groundFoes = this.physics.add.group();
@@ -324,6 +337,85 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  bonusHp() {
+    const n = this.S.grubs.length;
+    return (n >= 2 ? 1 : 0) + (n >= 4 ? 1 : 0) + (this.S.flower ? 1 : 0);
+  }
+  held() {
+    return Math.max(0, this.S.wisps.length - this.S.banked);
+  }
+
+  buildExtras() {
+    const L = this.L, S = this.S;
+    const glowAt = (x: number, y: number, tint: number, scale: number, alpha: number) =>
+      this.add.image(x, y, "glow").setTint(tint).setBlendMode(Phaser.BlendModes.ADD).setScale(scale).setAlpha(alpha).setDepth(2);
+
+    // Cornifer's map
+    if (L.mapSpot) {
+      this.add.image(L.mapSpot.x, L.mapSpot.y, "map_item").setOrigin(0.5, 1).setDepth(2);
+      glowAt(L.mapSpot.x, L.mapSpot.y - 24, 0xffe2a0, 0.4, 0.28);
+    }
+
+    // grubs
+    for (const gd of L.grubs) {
+      if (S.grubs.includes(gd.id)) continue;
+      const img = this.add.image(gd.x, gd.y, "grub_jar").setOrigin(0.5, 1).setDepth(2);
+      const glow = glowAt(gd.x, gd.y - 28, 0x9be08a, 0.4, 0.3);
+      this.tweens.add({ targets: img, angle: { from: -3, to: 3 }, duration: 800 + Math.random() * 500, yoyo: true, repeat: -1, ease: "Sine.inOut" });
+      this.grubObjs.push({ id: gd.id, x: gd.x, y: gd.y, img, glow, nextSqueak: 1500 + Math.random() * 4000 });
+    }
+
+    // the fragile flower and where it goes
+    if (L.vase) {
+      this.add.image(L.vase.x, L.vase.y, "vase").setOrigin(0.5, 1).setDepth(2);
+      if (S.flower) this.vaseFlower = this.add.image(L.vase.x, L.vase.y - 38, "flower").setOrigin(0.5, 1).setDepth(2.1);
+    }
+    if (L.flower && !S.flower) {
+      this.flowerImg = this.add.image(L.flower.x, L.flower.y, "flower").setOrigin(0.5, 1).setDepth(3);
+      this.flowerGlow = glowAt(L.flower.x, L.flower.y - 40, 0xffffff, 0.45, 0.35).setDepth(3);
+      this.tweens.add({ targets: this.flowerImg, angle: { from: -4, to: 4 }, duration: 1400, yoyo: true, repeat: -1, ease: "Sine.inOut" });
+    }
+
+    // the bank (and, once it has closed, the person who ran it)
+    if (L.bank && !S.bankClosed) {
+      this.bankImg = this.add.image(L.bank.x, L.bank.y, "bank").setOrigin(0.5, 1).setDepth(2);
+      this.bankLabel = this.add
+        .text(L.bank.x, L.bank.y - 190, "MILLIBELLE'S BANK\nDeposits welcome. Withdrawals: see manager.", {
+          fontFamily: "Georgia, serif", fontSize: "20px", fontStyle: "italic", color: "#f2d594",
+          stroke: "#02040a", strokeThickness: 5, align: "center", wordWrap: { width: 460 },
+        })
+        .setOrigin(0.5, 1).setDepth(3).setAlpha(0);
+      this.signTexts.push(this.bankLabel);
+    }
+    if (S.bankClosed) this.showMillibelle();
+
+    // Quirrel by the blue lake
+    if (L.lake) {
+      const lk = L.lake;
+      this.add.tileSprite(lk.x, lk.y - 3, lk.w, 56, "lake").setOrigin(0, 0).setDepth(1.4).setAlpha(0.96);
+      this.add.rectangle(lk.x, lk.y - 3, lk.w, 2, 0xcfe6ff, 0.8).setOrigin(0, 0).setDepth(1.45);
+      for (let i = 0; i < 9; i++) {
+        const sp = this.add.image(lk.x + 20 + Math.random() * (lk.w - 40), lk.y - 6 - Math.random() * 14, "dot").setTint(0xcfe6ff).setBlendMode(Phaser.BlendModes.ADD).setDepth(2).setScale(0.8).setAlpha(0);
+        this.tweens.add({ targets: sp, alpha: { from: 0, to: 0.9 }, duration: 900 + Math.random() * 900, yoyo: true, repeat: -1, delay: Math.random() * 2000 });
+      }
+      glowAt(lk.x + lk.w / 2, lk.y - 20, 0x6fa8ff, 3.2, 0.2);
+    }
+    if (L.quirrel) this.add.image(L.quirrel.x, L.quirrel.y, "quirrel").setOrigin(0.5, 1).setDepth(2);
+  }
+
+  showMillibelle() {
+    const m = this.L.millibelle;
+    if (!m || this.milliImg) return;
+    this.milliImg = this.add.image(m.x, m.y, "millibelle").setOrigin(0.5, 1).setDepth(2);
+    const t = this.add
+      .text(m.x, m.y - 170, "Out of office.", {
+        fontFamily: "Georgia, serif", fontSize: "20px", fontStyle: "italic", color: "#f2d594",
+        stroke: "#02040a", strokeThickness: 5, align: "center",
+      })
+      .setOrigin(0.5, 1).setDepth(3).setAlpha(0);
+    this.signTexts.push(t);
+  }
+
   buildPlayer() {
     this.player = this.physics.add.sprite(0, 0, "pl_idle_0").setOrigin(0.5, 1).setDepth(6);
     const b = this.player.body as Phaser.Physics.Arcade.Body;
@@ -470,7 +562,8 @@ export class GameScene extends Phaser.Scene {
       hp: this.hp,
       maxHp: this.maxHp,
       lit: [...this.S.lit],
-      wisps: this.S.wisps.length,
+      wisps: this.held(),
+      grubs: this.S.grubs.length,
       kills: this.S.kills,
       zone: this.zone,
       abilities: { ...this.S.abilities },
@@ -553,6 +646,18 @@ export class GameScene extends Phaser.Scene {
       s.setAlpha(clamp((520 - d) / 220, 0, 1) * 0.95);
     }
     this.pGlow.setScale(1.45 + Math.sin(time / 140) * 0.06);
+    if (this.flowerCarried && this.flowerImg) {
+      const fx = this.player.x - this.facing * 14 + Math.sin(time / 260) * 3;
+      const fy = this.player.y - 108 + Math.sin(time / 330) * 3;
+      this.flowerImg.setPosition(fx, fy).setAngle(Math.sin(time / 240) * 7);
+      this.flowerGlow?.setPosition(fx, fy - 38);
+    }
+    for (const gr of this.grubObjs) {
+      if (time > gr.nextSqueak && Math.abs(gr.x - px) < 360) {
+        gr.nextSqueak = time + 5000 + Math.random() * 5000;
+        audio.sfx("grub");
+      }
+    }
   }
 
   /* ----------------------------- player ----------------------------- */
@@ -745,6 +850,7 @@ export class GameScene extends Phaser.Scene {
 
   hurt(srcX: number, dmg = 1) {
     if (this.invuln || this.dead) return;
+    this.flowerShatter();
     this.hp = Math.max(0, this.hp - dmg);
     this.invulnUntil = this.now + 1200;
     this.hurtAnimUntil = this.now + 260;
@@ -763,6 +869,7 @@ export class GameScene extends Phaser.Scene {
 
   hazardHit() {
     if (this.dead) return;
+    this.flowerShatter();
     this.hp = Math.max(0, this.hp - 1);
     audio.sfx("hurt");
     this.cameras.main.flash(160, 0, 0, 0);
@@ -1237,7 +1344,7 @@ export class GameScene extends Phaser.Scene {
     switch (l.kind) {
       case "reach": return { ok: true, hint: "" };
       case "kills": return { ok: S.kills >= (l.n ?? 0), hint: `The flame won't catch. Defeat ${Math.max(0, (l.n ?? 0) - S.kills)} more creatures.` };
-      case "wisps": return { ok: S.wisps.length >= (l.n ?? 0), hint: `The flame wants wisps. ${Math.max(0, (l.n ?? 0) - S.wisps.length)} more to gather.` };
+      case "wisps": return { ok: S.wisps.length >= (l.n ?? 0), hint: `The flame wants wisps. ${Math.max(0, (l.n ?? 0) - S.wisps.length)} more to gather.${S.banked > 0 ? " (Banked ones still count.)" : ""}` };
       case "tablets": return { ok: S.tablets.length >= (l.n ?? 0), hint: `Read the old tablets first (${S.tablets.length}/${l.n}). Stand near one and press E.` };
       case "boss": return { ok: S.bosses.includes(l.boss ?? ""), hint: "Something guards this flame." };
       case "timer": return { ok: this.timerUntil > this.now, hint: "The flame is cold. Step on the rune behind you, then run." };
@@ -1291,6 +1398,8 @@ export class GameScene extends Phaser.Scene {
         }
       }
     }
+    this.extrasInteract(useJust, (h) => { hint = h; });
+
     // rune plate
     for (const pl of this.L.plates) {
       if (Math.abs(pl.x - px) < 46 && Math.abs(pl.y - py) < 30 && this.timerUntil < time) {
@@ -1311,6 +1420,178 @@ export class GameScene extends Phaser.Scene {
       }
     }
     this.setHint(hint);
+  }
+
+  /* ------------------ the hidden extras (all optional) ------------------ */
+  extrasInteract(useJust: boolean, setHint: (h: string) => void) {
+    const L = this.L, S = this.S;
+    const px = this.player.x, py = this.player.y;
+    const near = (o: { x: number; y: number } | null, dx = 70, dy = 90) => !!o && Math.abs(o.x - px) < dx && Math.abs(o.y - py) < dy;
+
+    // Cornifer's map
+    if (near(L.mapSpot)) {
+      setHint("E   read the map");
+      if (useJust) {
+        audio.sfx("tablet");
+        S.map = true;
+        this.save();
+        bus.emit("note", { kind: "map", zone: this.zone });
+      }
+    }
+
+    // grubs
+    for (let i = this.grubObjs.length - 1; i >= 0; i--) {
+      const gr = this.grubObjs[i];
+      if (Math.abs(gr.x - px) < 60 && Math.abs(gr.y - py) < 90) {
+        setHint("E   free the grub");
+        if (useJust) this.freeGrub(i);
+      }
+    }
+
+    // the flower
+    if (this.flowerImg && !this.flowerCarried && !S.flower && L.flower && near(L.flower)) {
+      setHint("E   pick up the flower");
+      if (useJust) {
+        this.flowerCarried = true;
+        this.flowerImg.setDepth(7);
+        this.flowerGlow?.setDepth(7);
+        audio.sfx("flower");
+        this.toast("Please handle with care.", true);
+      }
+    }
+    if (this.flowerCarried && L.vase && near(L.vase, 80)) {
+      setHint("E   plant the flower");
+      if (useJust) this.deliverFlower();
+    }
+
+    // the bank
+    if (this.bankImg && L.bank && !S.bankClosed && near(L.bank, 100)) {
+      const held = this.held();
+      setHint(held >= 2 ? `E   deposit 2 wisps  ·  balance ${S.banked}` : "Millibelle's Bank  ·  come back with wisps");
+      if (useJust && held >= 2) {
+        S.banked += 2;
+        audio.sfx("coin");
+        this.burst(L.bank.x, L.bank.y - 90, 8, "ember");
+        if (S.banked >= 6) this.closeBank();
+        else this.toast(`Deposited. Your balance is ${S.banked}. Totally safe.`);
+        this.save();
+        this.emitHud();
+      }
+    }
+    // Millibelle, found at last
+    if (this.milliImg && L.millibelle && near(L.millibelle, 90)) {
+      setHint("E   talk");
+      if (useJust) {
+        audio.sfx("coin");
+        if (!S.milli) {
+          S.milli = true;
+          const back = Math.ceil(S.banked / 2);
+          S.banked = Math.max(0, S.banked - back);
+          this.toast(`"Your wisps? Ah. Fees." She slides ${back} back across the table.`, true);
+          this.save();
+          this.emitHud();
+        } else {
+          const lines = ["I'm not discussing the bank.", "The weather's lovely, isn't it?", "Have you tried the other bank? There isn't one.", "I did not run. I relocated."];
+          this.toast(lines[this.milliLine++ % lines.length], true);
+        }
+      }
+    }
+
+    // Quirrel at the blue lake
+    if (near(L.quirrel, 90)) {
+      setHint("E   sit a while");
+      if (useJust) {
+        const lines = [
+          "Ah. You found the quiet place.",
+          "I came here to put my nail down. Just for a while.",
+          "The water keeps whatever it's told. It's a good listener.",
+          "Go on. Your friends are waiting for you to finish.",
+        ];
+        audio.sfx("bench");
+        this.toast(lines[this.quirrelLine++ % lines.length], true);
+        if (!S.quirrel) { S.quirrel = true; this.save(); }
+      }
+    }
+  }
+
+  freeGrub(i: number) {
+    const gr = this.grubObjs.splice(i, 1)[0];
+    this.S.grubs.push(gr.id);
+    const n = this.S.grubs.length;
+    audio.sfx("grub");
+    this.burst(gr.x, gr.y - 30, 12, "white");
+    gr.img.setTexture("grub").setAngle(0);
+    this.tweens.killTweensOf(gr.img);
+    this.tweens.add({ targets: gr.img, y: gr.y - 60, alpha: 0, duration: 800, ease: "Sine.out", onComplete: () => gr.img.destroy() });
+    gr.glow.destroy();
+    if (n === 2 || n === 4) {
+      this.maxHp += 1;
+      this.hp = this.maxHp;
+      this.toast(`A grub is freed (${n}/6). The grubs mended something: one more flame.`, true);
+    } else if (n === 6) {
+      this.toast("All six grubs are free.", true);
+      this.time.delayedCall(900, () => {
+        audio.sfx("grubsong");
+        bus.emit("note", { kind: "grubs" });
+      });
+    } else {
+      this.toast(`A grub is freed (${n}/6).`);
+    }
+    this.save();
+    this.emitHud();
+  }
+
+  flowerShatter() {
+    if (!this.flowerCarried || !this.flowerImg) return;
+    this.flowerCarried = false;
+    const img = this.flowerImg;
+    audio.sfx("shatter");
+    this.burst(img.x, img.y - 30, 18, "white");
+    this.toast("The flower shatters. It was a very delicate flower.");
+    img.setVisible(false);
+    this.flowerGlow?.setVisible(false);
+    this.time.delayedCall(900, () => {
+      const f = this.L.flower;
+      if (!f || this.S.flower) return;
+      img.setPosition(f.x, f.y).setAngle(0).setDepth(3).setVisible(true);
+      this.flowerGlow?.setPosition(f.x, f.y - 40).setDepth(3).setVisible(true);
+      this.burst(f.x, f.y - 30, 8, "white");
+    });
+  }
+
+  deliverFlower() {
+    const v = this.L.vase;
+    if (!v || !this.flowerImg) return;
+    this.flowerCarried = false;
+    this.flowerImg.destroy();
+    this.flowerGlow?.destroy();
+    this.flowerImg = null;
+    this.flowerGlow = null;
+    this.vaseFlower = this.add.image(v.x, v.y - 38, "flower").setOrigin(0.5, 1).setDepth(2.1);
+    this.S.flower = true;
+    this.maxHp += 1;
+    this.hp = this.maxHp;
+    audio.sfx("altar");
+    this.burst(v.x, v.y - 50, 26, "white");
+    this.toast("Delivered. Not a petal out of place. One more flame.", true);
+    this.save();
+    this.emitHud();
+  }
+
+  closeBank() {
+    this.S.bankClosed = true;
+    this.save();
+    const b = this.bankImg;
+    this.time.delayedCall(700, () => {
+      audio.sfx("vanish");
+      this.cameras.main.shake(500, 0.006);
+      if (this.L.bank) this.burst(this.L.bank.x, this.L.bank.y - 80, 40, "dark");
+      if (b) this.tweens.add({ targets: b, alpha: 0, y: b.y + 30, scaleY: 0.4, duration: 900, onComplete: () => b.destroy() });
+      this.bankLabel?.setVisible(false);
+      this.bankImg = null;
+      this.toast("The bank has closed. Permanently. Millibelle left no forwarding address.", true);
+      this.showMillibelle();
+    });
   }
 
   grantAbility(a: GameScene["altarObjs"][number]) {
